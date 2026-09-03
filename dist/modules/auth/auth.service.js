@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authService = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const user_model_1 = __importDefault(require("../user/user.model"));
+const jwt_1 = __importDefault(require("../../utils/jwt"));
 const registerUser = async (payload) => {
     const existingUser = await user_model_1.default.findOne({
         email: payload.email.toLowerCase(),
@@ -36,7 +37,14 @@ const loginUser = async (payload) => {
         throw new Error("Invalid email or password");
     }
     const { password, ...userObject } = user.toObject();
-    return userObject;
+    const token = (0, jwt_1.default)({
+        userId: user._id.toString(),
+        role: user.role,
+    });
+    return {
+        user: userObject,
+        token,
+    };
 };
 exports.authService = {
     registerUser,

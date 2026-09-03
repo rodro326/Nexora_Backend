@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../user/user.model";
 import { ILoginRequest, IRegisterRequest } from "./auth.types";
+import generateToken from "../../utils/jwt";
 
 const registerUser = async (payload: IRegisterRequest) => {
   const existingUser = await User.findOne({
@@ -46,7 +47,15 @@ const loginUser = async (payload: ILoginRequest) => {
 
   const { password, ...userObject } = user.toObject();
 
-  return userObject;
+const token = generateToken({
+  userId: user._id.toString(),
+  role: user.role,
+});
+
+return {
+  user: userObject,
+  token,
+};
 };
 
 export const authService = {
