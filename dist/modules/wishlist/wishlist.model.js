@@ -19,4 +19,4 @@ const wishlistSchema = new mongoose_1.Schema({
 });
 const Wishlist = (0, mongoose_1.model)("Wishlist", wishlistSchema);
 exports.default = Wishlist;
-//# sourceMappingURL=whishlist.model.js.map
+//# sourceMappingURL=wishlist.model.js.map

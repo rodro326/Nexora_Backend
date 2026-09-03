@@ -6,6 +6,7 @@ import productRoute from "./modules/product/product.route";
 import categoryRoute from "./modules/category/category.route";
 import brandRoute from "./modules/brand/brand.route";
 import cartRoute from "./modules/cart/cart.route";
+import wishlistRoute from "./modules/wishlist/wishlist.route";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/products", productRoute);
 app.use("/api/categories", categoryRoute);
 app.use("/api/brands", brandRoute);
 app.use("/api/cart", cartRoute);
+app.use("/api/wishlist", wishlistRoute);
 
 
 app.get("/", (req, res) => {
