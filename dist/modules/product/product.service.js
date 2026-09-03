@@ -12,7 +12,41 @@ const createProduct = async (payload, vendorId) => {
     });
     return product;
 };
+const getAllProducts = async () => {
+    const products = await product_model_1.default.find()
+        .populate("category", "name slug")
+        .populate("brand", "name slug")
+        .sort({ createdAt: -1 });
+    return products;
+};
+const getProductById = async (productId) => {
+    const product = await product_model_1.default.findById(productId)
+        .populate("category", "name slug")
+        .populate("brand", "name slug");
+    return product;
+};
+const updateProduct = async (productId, vendorId, payload) => {
+    const product = await product_model_1.default.findOneAndUpdate({
+        _id: productId,
+        vendor: vendorId,
+    }, payload, {
+        new: true,
+        runValidators: true,
+    });
+    return product;
+};
+const deleteProduct = async (productId, vendorId) => {
+    const product = await product_model_1.default.findOneAndDelete({
+        _id: productId,
+        vendor: vendorId,
+    });
+    return product;
+};
 exports.productService = {
     createProduct,
+    getAllProducts,
+    getProductById,
+    updateProduct,
+    deleteProduct,
 };
 //# sourceMappingURL=product.service.js.map
