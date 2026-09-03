@@ -1,1 +1,1 @@
-{"version":3,"file":"product.route.js","sourceRoot":"","sources":["../../../src/modules/product/product.route.ts"],"names":[],"mappings":""}
+{"version":3,"file":"product.route.js","sourceRoot":"","sources":["../../../src/modules/product/product.route.ts"],"names":[],"mappings":";;;;;AAAA,sDAA8B;AAC9B,wFAA+D;AAC/D,wFAA+D;AAC/D,oGAA2E;AAC3E,6DAAyD;AACzD,6DAAqE;AAErE,MAAM,MAAM,GAAG,iBAAO,CAAC,MAAM,EAAE,CAAC;AAEhC,MAAM,CAAC,IAAI,CACT,GAAG,EACH,yBAAc,EACd,IAAA,yBAAc,EAAC,QAAQ,CAAC,EACxB,IAAA,+BAAoB,EAAC,kDAA6B,CAAC,EACnD,sCAAiB,CAAC,aAAa,CAChC,CAAC;AAEF,kBAAe,MAAM,CAAC"}
