@@ -12,6 +12,7 @@ import addressRoute from "./modules/address/address.route";
 import notificationRoute from "./modules/notification/notification.route";
 import analyticsRoute from "./modules/analytics/analytics.route";
 import inventoryRoute from "./modules/inventory/inventory.route";
+import paymentRoute from "./modules/payment/payment.route";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/addresses", addressRoute);
 app.use("/api/notifications", notificationRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/inventory", inventoryRoute);
+app.use("/api/payments", paymentRoute);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Nexora Backend!");

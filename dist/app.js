@@ -17,6 +17,7 @@ const address_route_1 = __importDefault(require("./modules/address/address.route
 const notification_route_1 = __importDefault(require("./modules/notification/notification.route"));
 const analytics_route_1 = __importDefault(require("./modules/analytics/analytics.route"));
 const inventory_route_1 = __importDefault(require("./modules/inventory/inventory.route"));
+const payment_route_1 = __importDefault(require("./modules/payment/payment.route"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use("/api/users", user_route_1.default);
@@ -31,6 +32,7 @@ app.use("/api/addresses", address_route_1.default);
 app.use("/api/notifications", notification_route_1.default);
 app.use("/api/analytics", analytics_route_1.default);
 app.use("/api/inventory", inventory_route_1.default);
+app.use("/api/payments", payment_route_1.default);
 app.get("/", (req, res) => {
     res.send("Welcome to Nexora Backend!");
 });
