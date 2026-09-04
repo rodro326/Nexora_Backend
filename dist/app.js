@@ -19,6 +19,8 @@ const analytics_route_1 = __importDefault(require("./modules/analytics/analytics
 const inventory_route_1 = __importDefault(require("./modules/inventory/inventory.route"));
 const payment_route_1 = __importDefault(require("./modules/payment/payment.route"));
 const review_route_1 = __importDefault(require("./modules/review/review.route"));
+const coupon_route_1 = __importDefault(require("./modules/coupon/coupon.route"));
+const withdrawal_route_1 = __importDefault(require("./modules/withdrawal/withdrawal.route"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use("/api/users", user_route_1.default);
@@ -35,6 +37,8 @@ app.use("/api/analytics", analytics_route_1.default);
 app.use("/api/inventory", inventory_route_1.default);
 app.use("/api/payments", payment_route_1.default);
 app.use("/api/reviews", review_route_1.default);
+app.use("/api/coupons", coupon_route_1.default);
+app.use("/api/withdrawals", withdrawal_route_1.default);
 app.get("/", (req, res) => {
     res.send("Welcome to Nexora Backend!");
 });

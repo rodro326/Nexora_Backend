@@ -14,6 +14,8 @@ import analyticsRoute from "./modules/analytics/analytics.route";
 import inventoryRoute from "./modules/inventory/inventory.route";
 import paymentRoute from "./modules/payment/payment.route";
 import reviewRoute from "./modules/review/review.route";
+import couponRoute from "./modules/coupon/coupon.route";
+import withdrawalRoute from "./modules/withdrawal/withdrawal.route";
 
 const app = express();
 
@@ -34,6 +36,8 @@ app.use("/api/analytics", analyticsRoute);
 app.use("/api/inventory", inventoryRoute);
 app.use("/api/payments", paymentRoute);
 app.use("/api/reviews", reviewRoute);
+app.use("/api/coupons", couponRoute);
+app.use("/api/withdrawals", withdrawalRoute);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Nexora Backend!");
