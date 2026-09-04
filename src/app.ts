@@ -16,6 +16,7 @@ import paymentRoute from "./modules/payment/payment.route";
 import reviewRoute from "./modules/review/review.route";
 import couponRoute from "./modules/coupon/coupon.route";
 import withdrawalRoute from "./modules/withdrawal/withdrawal.route";
+import aiChatRoute from "./modules/ai-chat/ai.route";
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/payments", paymentRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/coupons", couponRoute);
 app.use("/api/withdrawals", withdrawalRoute);
+app.use("/api/ai-chat", aiChatRoute);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Nexora Backend!");

@@ -1,4 +1,5 @@
 import Product from "./product.model";
+import Category from "../category/category.model";
 
 interface CreateProductPayload {
   name: string;
@@ -80,10 +81,68 @@ const deleteProduct = async (
   return product;
 };
 
+const searchProductsForAI = async (
+  search?: string,
+  maxPrice?: number
+) => {
+  const filter: any = {
+    isActive: true,
+  };
+  let categoryIds: any[] = [];
+
+if (search) {
+  const categories = await Category.find({
+    name: {
+      $regex: search,
+      $options: "i",
+    },
+  }).select("_id");
+
+  categoryIds = categories.map((category) => category._id);
+}
+
+  if (search) {
+    filter.$or = [
+      {
+        name: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        description: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        category: {
+          $in: categoryIds,
+        },
+      },
+    ];
+  }
+
+  if (maxPrice !== undefined) {
+    filter.price = {
+      $lte: maxPrice,
+    };
+  }
+
+  const products = await Product.find(filter)
+    .populate("category", "name slug")
+    .populate("brand", "name slug")
+    .sort({ createdAt: -1 })
+    .limit(10);
+
+  return products;
+};
+
 export const productService = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  searchProductsForAI,
 };

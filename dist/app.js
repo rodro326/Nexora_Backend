@@ -21,6 +21,7 @@ const payment_route_1 = __importDefault(require("./modules/payment/payment.route
 const review_route_1 = __importDefault(require("./modules/review/review.route"));
 const coupon_route_1 = __importDefault(require("./modules/coupon/coupon.route"));
 const withdrawal_route_1 = __importDefault(require("./modules/withdrawal/withdrawal.route"));
+const ai_route_1 = __importDefault(require("./modules/ai-chat/ai.route"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use("/api/users", user_route_1.default);
@@ -39,6 +40,7 @@ app.use("/api/payments", payment_route_1.default);
 app.use("/api/reviews", review_route_1.default);
 app.use("/api/coupons", coupon_route_1.default);
 app.use("/api/withdrawals", withdrawal_route_1.default);
+app.use("/api/ai-chat", ai_route_1.default);
 app.get("/", (req, res) => {
     res.send("Welcome to Nexora Backend!");
 });

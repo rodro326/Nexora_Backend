@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.productService = void 0;
 const product_model_1 = __importDefault(require("./product.model"));
+const category_model_1 = __importDefault(require("../category/category.model"));
 const createProduct = async (payload, vendorId) => {
     const product = await product_model_1.default.create({
         ...payload,
@@ -42,11 +43,59 @@ const deleteProduct = async (productId, vendorId) => {
     });
     return product;
 };
+const searchProductsForAI = async (search, maxPrice) => {
+    const filter = {
+        isActive: true,
+    };
+    let categoryIds = [];
+    if (search) {
+        const categories = await category_model_1.default.find({
+            name: {
+                $regex: search,
+                $options: "i",
+            },
+        }).select("_id");
+        categoryIds = categories.map((category) => category._id);
+    }
+    if (search) {
+        filter.$or = [
+            {
+                name: {
+                    $regex: search,
+                    $options: "i",
+                },
+            },
+            {
+                description: {
+                    $regex: search,
+                    $options: "i",
+                },
+            },
+            {
+                category: {
+                    $in: categoryIds,
+                },
+            },
+        ];
+    }
+    if (maxPrice !== undefined) {
+        filter.price = {
+            $lte: maxPrice,
+        };
+    }
+    const products = await product_model_1.default.find(filter)
+        .populate("category", "name slug")
+        .populate("brand", "name slug")
+        .sort({ createdAt: -1 })
+        .limit(10);
+    return products;
+};
 exports.productService = {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    searchProductsForAI,
 };
 //# sourceMappingURL=product.service.js.map
