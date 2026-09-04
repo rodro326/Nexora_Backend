@@ -66,21 +66,44 @@ const updateInventory = async (
     lowStockThreshold?: number;
   }
 ) => {
-  const inventory = await Inventory.findOneAndUpdate(
-    {
-      product: productId,
-      vendor: vendorId,
-    },
-    {
-      $set: payload,
-    },
-    {
-      returnDocument: "after",
-      runValidators: true,
-    }
-  ).populate("product", "name price stock images");
+  const inventory = await Inventory.findOne({
+    product: productId,
+    vendor: vendorId,
+  });
 
-  return inventory;
+  if (!inventory) {
+    return null;
+  }
+
+  if (payload.quantity !== undefined) {
+    await Product.findOneAndUpdate(
+      {
+        _id: productId,
+        vendor: vendorId,
+      },
+      {
+        $set: {
+          stock: payload.quantity,
+        },
+      },
+      {
+        runValidators: true,
+      }
+    );
+
+    inventory.quantity = payload.quantity;
+  }
+
+  if (payload.lowStockThreshold !== undefined) {
+    inventory.lowStockThreshold = payload.lowStockThreshold;
+  }
+
+  await inventory.save();
+
+  return Inventory.findById(inventory._id).populate(
+    "product",
+    "name price stock images"
+  );
 };
 
 const deleteInventory = async (

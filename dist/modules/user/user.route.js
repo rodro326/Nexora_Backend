@@ -7,8 +7,12 @@ const express_1 = __importDefault(require("express"));
 const user_controller_1 = require("./user.controller");
 const auth_middleware_1 = __importDefault(require("../../middlewares/auth.middleware"));
 const role_middleware_1 = __importDefault(require("../../middlewares/role.middleware"));
+const validation_middleware_1 = __importDefault(require("../../middlewares/validation.middleware"));
+const user_validation_1 = require("./user.validation");
 const router = express_1.default.Router();
 router.get("/", auth_middleware_1.default, (0, role_middleware_1.default)("admin"), user_controller_1.userController.getAllUsers);
+router.get("/me", auth_middleware_1.default, user_controller_1.userController.getMyProfile);
 router.get("/:userId", auth_middleware_1.default, (0, role_middleware_1.default)("admin"), user_controller_1.userController.getUserById);
+router.patch("/me", auth_middleware_1.default, (0, validation_middleware_1.default)(user_validation_1.updateMyProfileValidationSchema), user_controller_1.userController.updateMyProfile);
 exports.default = router;
 //# sourceMappingURL=user.route.js.map

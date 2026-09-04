@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificationController = void 0;
-const notification_service_1 = require("./notification.service");
-const createNotification = async (req, res) => {
+exports.addressController = void 0;
+const address_service_1 = require("./address.service");
+const createAddress = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({
@@ -10,16 +10,11 @@ const createNotification = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const { userId, title, message, type } = req.body;
-        const notification = await notification_service_1.notificationService.createNotification(userId, {
-            title,
-            message,
-            type,
-        });
+        const address = await address_service_1.addressService.createAddress(req.user.userId, req.body);
         res.status(201).json({
             success: true,
-            message: "Notification created successfully",
-            data: notification,
+            message: "Address created successfully",
+            data: address,
         });
     }
     catch (error) {
@@ -27,11 +22,11 @@ const createNotification = async (req, res) => {
             success: false,
             message: error instanceof Error
                 ? error.message
-                : "Failed to create notification",
+                : "Failed to create address",
         });
     }
 };
-const getMyNotifications = async (req, res) => {
+const getMyAddresses = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({
@@ -39,11 +34,11 @@ const getMyNotifications = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const notifications = await notification_service_1.notificationService.getMyNotifications(req.user.userId);
+        const addresses = await address_service_1.addressService.getMyAddresses(req.user.userId);
         res.status(200).json({
             success: true,
-            message: "Notifications retrieved successfully",
-            data: notifications,
+            message: "Addresses retrieved successfully",
+            data: addresses,
         });
     }
     catch (error) {
@@ -51,11 +46,11 @@ const getMyNotifications = async (req, res) => {
             success: false,
             message: error instanceof Error
                 ? error.message
-                : "Failed to retrieve notifications",
+                : "Failed to retrieve addresses",
         });
     }
 };
-const markAsRead = async (req, res) => {
+const getAddressById = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({
@@ -63,18 +58,49 @@ const markAsRead = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const notificationId = req.params.notificationId;
-        const notification = await notification_service_1.notificationService.markAsRead(notificationId, req.user.userId);
-        if (!notification) {
+        const addressId = req.params.addressId;
+        const address = await address_service_1.addressService.getAddressById(addressId, req.user.userId);
+        if (!address) {
             return res.status(404).json({
                 success: false,
-                message: "Notification not found",
+                message: "Address not found",
             });
         }
         res.status(200).json({
             success: true,
-            message: "Notification marked as read",
-            data: notification,
+            message: "Address retrieved successfully",
+            data: address,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error
+                ? error.message
+                : "Failed to retrieve address",
+        });
+    }
+};
+const updateAddress = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+        const addressId = req.params.addressId;
+        const address = await address_service_1.addressService.updateAddress(addressId, req.user.userId, req.body);
+        if (!address) {
+            return res.status(404).json({
+                success: false,
+                message: "Address not found",
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: "Address updated successfully",
+            data: address,
         });
     }
     catch (error) {
@@ -82,11 +108,11 @@ const markAsRead = async (req, res) => {
             success: false,
             message: error instanceof Error
                 ? error.message
-                : "Failed to mark notification as read",
+                : "Failed to update address",
         });
     }
 };
-const markAllAsRead = async (req, res) => {
+const deleteAddress = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({
@@ -94,42 +120,18 @@ const markAllAsRead = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const result = await notification_service_1.notificationService.markAllAsRead(req.user.userId);
-        res.status(200).json({
-            success: true,
-            message: "All notifications marked as read",
-            data: result,
-        });
-    }
-    catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error instanceof Error
-                ? error.message
-                : "Failed to mark all notifications as read",
-        });
-    }
-};
-const deleteNotification = async (req, res) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required",
-            });
-        }
-        const notificationId = req.params.notificationId;
-        const notification = await notification_service_1.notificationService.deleteNotification(notificationId, req.user.userId);
-        if (!notification) {
+        const addressId = req.params.addressId;
+        const address = await address_service_1.addressService.deleteAddress(addressId, req.user.userId);
+        if (!address) {
             return res.status(404).json({
                 success: false,
-                message: "Notification not found",
+                message: "Address not found",
             });
         }
         res.status(200).json({
             success: true,
-            message: "Notification deleted successfully",
-            data: notification,
+            message: "Address deleted successfully",
+            data: address,
         });
     }
     catch (error) {
@@ -137,15 +139,15 @@ const deleteNotification = async (req, res) => {
             success: false,
             message: error instanceof Error
                 ? error.message
-                : "Failed to delete notification",
+                : "Failed to delete address",
         });
     }
 };
-exports.notificationController = {
-    createNotification,
-    getMyNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
+exports.addressController = {
+    createAddress,
+    getMyAddresses,
+    getAddressById,
+    updateAddress,
+    deleteAddress,
 };
-//# sourceMappingURL=notification.controller.js.map
+//# sourceMappingURL=address.controller.js.map

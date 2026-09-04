@@ -12,6 +12,11 @@ const category_route_1 = __importDefault(require("./modules/category/category.ro
 const brand_route_1 = __importDefault(require("./modules/brand/brand.route"));
 const cart_route_1 = __importDefault(require("./modules/cart/cart.route"));
 const wishlist_route_1 = __importDefault(require("./modules/wishlist/wishlist.route"));
+const order_route_1 = __importDefault(require("./modules/order/order.route"));
+const address_route_1 = __importDefault(require("./modules/address/address.route"));
+const notification_route_1 = __importDefault(require("./modules/notification/notification.route"));
+const analytics_route_1 = __importDefault(require("./modules/analytics/analytics.route"));
+const inventory_route_1 = __importDefault(require("./modules/inventory/inventory.route"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use("/api/users", user_route_1.default);
@@ -21,6 +26,11 @@ app.use("/api/categories", category_route_1.default);
 app.use("/api/brands", brand_route_1.default);
 app.use("/api/cart", cart_route_1.default);
 app.use("/api/wishlist", wishlist_route_1.default);
+app.use("/api/orders", order_route_1.default);
+app.use("/api/addresses", address_route_1.default);
+app.use("/api/notifications", notification_route_1.default);
+app.use("/api/analytics", analytics_route_1.default);
+app.use("/api/inventory", inventory_route_1.default);
 app.get("/", (req, res) => {
     res.send("Welcome to Nexora Backend!");
 });
