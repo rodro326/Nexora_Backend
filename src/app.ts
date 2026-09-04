@@ -10,6 +10,7 @@ import wishlistRoute from "./modules/wishlist/wishlist.route";
 import orderRoute from "./modules/order/order.route";
 import addressRoute from "./modules/address/address.route";
 import notificationRoute from "./modules/notification/notification.route";
+import analyticsRoute from "./modules/analytics/analytics.route";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use("/api/wishlist", wishlistRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/addresses", addressRoute);
 app.use("/api/notifications", notificationRoute);
+app.use("/api/analytics", analyticsRoute);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Nexora Backend!");
