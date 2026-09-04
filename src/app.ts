@@ -7,6 +7,9 @@ import categoryRoute from "./modules/category/category.route";
 import brandRoute from "./modules/brand/brand.route";
 import cartRoute from "./modules/cart/cart.route";
 import wishlistRoute from "./modules/wishlist/wishlist.route";
+import orderRoute from "./modules/order/order.route";
+import addressRoute from "./modules/address/address.route";
+import notificationRoute from "./modules/notification/notification.route";
 
 const app = express();
 
@@ -20,7 +23,9 @@ app.use("/api/categories", categoryRoute);
 app.use("/api/brands", brandRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/wishlist", wishlistRoute);
-
+app.use("/api/orders", orderRoute);
+app.use("/api/addresses", addressRoute);
+app.use("/api/notifications", notificationRoute);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Nexora Backend!");

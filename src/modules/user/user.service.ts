@@ -12,7 +12,29 @@ const getUserById = async (userId: string) => {
   return user;
 };
 
+const updateMyProfile = async (
+  userId: string,
+  payload: {
+    name?: string;
+    phone?: string;
+  }
+) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: payload,
+    },
+    {
+      returnDocument: "after",
+      runValidators: true,
+    }
+  ).select("-password");
+
+  return user;
+};
+
 export const userService = {
   getAllUsers,
   getUserById,
+  updateMyProfile,
 };
