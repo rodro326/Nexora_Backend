@@ -1,5 +1,7 @@
 import Payment from "./payment.model";
 import Order from "../order/order.model";
+import { initiatePayment } from "./sslcommerz.service";
+import crypto from "crypto";
 
 const createPayment = async (
   userId: string,
@@ -13,10 +15,12 @@ const createPayment = async (
   const order = await Order.findOne({
     _id: payload.orderId,
     user: userId,
-  });
+  }).populate("user", "name email");
 
   if (!order) {
-    throw new Error("Order not found or does not belong to this customer");
+    throw new Error(
+      "Order not found or does not belong to this customer"
+    );
   }
 
   if (order.totalAmount !== payload.amount) {
@@ -31,27 +35,49 @@ const createPayment = async (
     throw new Error("Payment already exists for this order");
   }
 
+  // COD payment
+  if (payload.paymentMethod === "cod") {
+    const payment = await Payment.create({
+      order: payload.orderId,
+      user: userId,
+      amount: payload.amount,
+      paymentMethod: "cod",
+      paymentStatus: "pending",
+    });
+
+    return {
+      payment,
+      gatewayUrl: null,
+    };
+  }
+
+  // SSLCommerz payment
+  const transactionId =
+    payload.transactionId || `NEXORA_${crypto.randomUUID()}`;
+
+  const customer = order.user as any;
+
   const payment = await Payment.create({
     order: payload.orderId,
     user: userId,
     amount: payload.amount,
     paymentMethod: payload.paymentMethod,
-    paymentStatus:
-      payload.paymentMethod === "cod" ? "pending" : "paid",
-    transactionId: payload.transactionId,
-    paidAt:
-      payload.paymentMethod === "cod"
-        ? undefined
-        : new Date(),
+    paymentStatus: "pending",
+    transactionId,
   });
 
-  if (payment.paymentStatus === "paid") {
-    await Order.findByIdAndUpdate(payload.orderId, {
-      paymentStatus: "paid",
-    });
-  }
+  const gatewayResponse = await initiatePayment({
+    totalAmount: payload.amount,
+    transactionId,
+    customerName: customer.name,
+    customerEmail: customer.email,
+    customerPhone: "01700000000",
+  });
 
-  return payment;
+  return {
+    payment,
+    gatewayUrl: gatewayResponse.GatewayPageURL,
+  };
 };
 
 const getMyPayments = async (userId: string) => {

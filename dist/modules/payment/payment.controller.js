@@ -110,6 +110,22 @@ const updatePaymentStatus = async (req, res) => {
         });
     }
 };
+const paymentSuccess = async (req, res) => {
+    try {
+        console.log("SSLCommerz payment success:", req.body);
+        return res.status(200).json({
+            success: true,
+            message: "Payment successful",
+            data: req.body,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Payment success processing failed",
+        });
+    }
+};
 const getAllPayments = async (req, res) => {
     try {
         if (!req.user) {
@@ -140,5 +156,6 @@ exports.paymentController = {
     getPaymentByOrder,
     updatePaymentStatus,
     getAllPayments,
+    paymentSuccess,
 };
 //# sourceMappingURL=payment.controller.js.map

@@ -4,10 +4,14 @@ exports.aiChatService = void 0;
 const product_service_1 = require("../product/product.service");
 const sendMessage = async (payload) => {
     const message = payload.message.trim().toLowerCase();
-    const searchTerm = "laptop";
-    console.log("AI Search Term:", searchTerm);
+    const searchTerm = message
+        .replace(/can you|please|find|show me|search for|a product|product/gi, "")
+        .replace(/[?.,!]/g, "")
+        .trim();
+    console.log("USER MESSAGE:", message);
+    console.log("SEARCH TERM:", searchTerm);
     const products = await product_service_1.productService.searchProductsForAI(searchTerm);
-    console.log("AI Products Found:", products.length);
+    console.log("PRODUCT COUNT:", products.length);
     let reply = "I'm Nexora AI Assistant. How can I help you with your shopping today?";
     if (products.length > 0) {
         const productList = products

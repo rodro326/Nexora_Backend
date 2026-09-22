@@ -55,4 +55,47 @@ router.patch(
   paymentController.updatePaymentStatus
 );
 
+router.post(
+  "/sslcommerz/success",
+  paymentController.paymentSuccess
+);
+
+router.post(
+  "/sslcommerz/fail",
+  (req, res) => {
+    console.log("SSLCommerz payment failed:", req.body);
+
+    return res.status(200).json({
+      success: false,
+      message: "Payment failed",
+      data: req.body,
+    });
+  }
+);
+
+router.post(
+  "/sslcommerz/cancel",
+  (req, res) => {
+    console.log("SSLCommerz payment cancelled:", req.body);
+
+    return res.status(200).json({
+      success: false,
+      message: "Payment cancelled",
+      data: req.body,
+    });
+  }
+);
+
+router.post(
+  "/sslcommerz/ipn",
+  (req, res) => {
+    console.log("SSLCommerz IPN received:", req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "IPN received",
+    });
+  }
+);
+
 export default router;

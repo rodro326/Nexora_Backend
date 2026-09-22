@@ -20,5 +20,29 @@ router.get("/order/:orderId", auth_middleware_1.default, (0, role_middleware_1.d
 router.get("/", auth_middleware_1.default, (0, role_middleware_1.default)("admin"), payment_controller_1.paymentController.getAllPayments);
 // Admin: Update payment status
 router.patch("/:paymentId/status", auth_middleware_1.default, (0, role_middleware_1.default)("admin"), (0, validation_middleware_1.default)(payment_validation_1.updatePaymentStatusValidationSchema), payment_controller_1.paymentController.updatePaymentStatus);
+router.post("/sslcommerz/success", payment_controller_1.paymentController.paymentSuccess);
+router.post("/sslcommerz/fail", (req, res) => {
+    console.log("SSLCommerz payment failed:", req.body);
+    return res.status(200).json({
+        success: false,
+        message: "Payment failed",
+        data: req.body,
+    });
+});
+router.post("/sslcommerz/cancel", (req, res) => {
+    console.log("SSLCommerz payment cancelled:", req.body);
+    return res.status(200).json({
+        success: false,
+        message: "Payment cancelled",
+        data: req.body,
+    });
+});
+router.post("/sslcommerz/ipn", (req, res) => {
+    console.log("SSLCommerz IPN received:", req.body);
+    return res.status(200).json({
+        success: true,
+        message: "IPN received",
+    });
+});
 exports.default = router;
 //# sourceMappingURL=payment.route.js.map

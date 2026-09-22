@@ -6,11 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.paymentService = void 0;
 const payment_model_1 = __importDefault(require("./payment.model"));
 const order_model_1 = __importDefault(require("../order/order.model"));
+const sslcommerz_service_1 = require("./sslcommerz.service");
+const crypto_1 = __importDefault(require("crypto"));
 const createPayment = async (userId, payload) => {
     const order = await order_model_1.default.findOne({
         _id: payload.orderId,
         user: userId,
-    });
+    }).populate("user", "name email");
     if (!order) {
         throw new Error("Order not found or does not belong to this customer");
     }
@@ -23,23 +25,42 @@ const createPayment = async (userId, payload) => {
     if (existingPayment) {
         throw new Error("Payment already exists for this order");
     }
+    // COD payment
+    if (payload.paymentMethod === "cod") {
+        const payment = await payment_model_1.default.create({
+            order: payload.orderId,
+            user: userId,
+            amount: payload.amount,
+            paymentMethod: "cod",
+            paymentStatus: "pending",
+        });
+        return {
+            payment,
+            gatewayUrl: null,
+        };
+    }
+    // SSLCommerz payment
+    const transactionId = payload.transactionId || `NEXORA_${crypto_1.default.randomUUID()}`;
+    const customer = order.user;
     const payment = await payment_model_1.default.create({
         order: payload.orderId,
         user: userId,
         amount: payload.amount,
         paymentMethod: payload.paymentMethod,
-        paymentStatus: payload.paymentMethod === "cod" ? "pending" : "paid",
-        transactionId: payload.transactionId,
-        paidAt: payload.paymentMethod === "cod"
-            ? undefined
-            : new Date(),
+        paymentStatus: "pending",
+        transactionId,
     });
-    if (payment.paymentStatus === "paid") {
-        await order_model_1.default.findByIdAndUpdate(payload.orderId, {
-            paymentStatus: "paid",
-        });
-    }
-    return payment;
+    const gatewayResponse = await (0, sslcommerz_service_1.initiatePayment)({
+        totalAmount: payload.amount,
+        transactionId,
+        customerName: customer.name,
+        customerEmail: customer.email,
+        customerPhone: "01700000000",
+    });
+    return {
+        payment,
+        gatewayUrl: gatewayResponse.GatewayPageURL,
+    };
 };
 const getMyPayments = async (userId) => {
     const payments = await payment_model_1.default.find({

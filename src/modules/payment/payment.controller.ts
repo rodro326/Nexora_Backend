@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import { paymentService } from "./payment.service";
 
@@ -141,6 +141,23 @@ const updatePaymentStatus = async (
   }
 };
 
+const paymentSuccess = async (req: Request, res: Response) => {
+  try {
+    console.log("SSLCommerz payment success:", req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment successful",
+      data: req.body,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Payment success processing failed",
+    });
+  }
+};
+
 const getAllPayments = async (
   req: AuthRequest,
   res: Response
@@ -177,4 +194,5 @@ export const paymentController = {
   getPaymentByOrder,
   updatePaymentStatus,
   getAllPayments,
+  paymentSuccess,
 };
