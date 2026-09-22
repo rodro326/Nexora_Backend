@@ -54,7 +54,9 @@ const initiatePayment = async (payload: {
 
   const response = await sslcommerz.init(data);
 
-  return response;
+console.log("SSLCommerz init response:", response);
+
+return response;
 };
 
 const validatePayment = async (valId: string) => {

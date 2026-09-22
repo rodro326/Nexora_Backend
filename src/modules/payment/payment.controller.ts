@@ -143,17 +143,30 @@ const updatePaymentStatus = async (
 
 const paymentSuccess = async (req: Request, res: Response) => {
   try {
-    console.log("SSLCommerz payment success:", req.body);
+    const { val_id } = req.body;
+
+    if (!val_id) {
+      return res.status(400).json({
+        success: false,
+        message: "SSLCommerz validation ID is missing",
+      });
+    }
+
+    const payment =
+      await paymentService.validateAndCompletePayment(val_id);
 
     return res.status(200).json({
       success: true,
-      message: "Payment successful",
-      data: req.body,
+      message: "Payment completed successfully",
+      data: payment,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Payment success processing failed",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Payment validation failed",
     });
   }
 };

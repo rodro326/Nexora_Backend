@@ -8,6 +8,7 @@ const payment_model_1 = __importDefault(require("./payment.model"));
 const order_model_1 = __importDefault(require("../order/order.model"));
 const sslcommerz_service_1 = require("./sslcommerz.service");
 const crypto_1 = __importDefault(require("crypto"));
+const sslcommerz_service_2 = require("./sslcommerz.service");
 const createPayment = async (userId, payload) => {
     const order = await order_model_1.default.findOne({
         _id: payload.orderId,
@@ -95,6 +96,37 @@ const updatePaymentStatus = async (paymentId, payload) => {
     });
     return payment;
 };
+const validateAndCompletePayment = async (valId) => {
+    const validationResponse = await (0, sslcommerz_service_2.validatePayment)(valId);
+    if (validationResponse.status !== "VALID") {
+        throw new Error("SSLCommerz payment validation failed");
+    }
+    const transactionId = validationResponse.tran_id;
+    const amount = Number(validationResponse.amount);
+    const currency = validationResponse.currency;
+    if (!transactionId) {
+        throw new Error("Transaction ID missing from SSLCommerz response");
+    }
+    if (currency !== "BDT") {
+        throw new Error("Invalid payment currency");
+    }
+    const payment = await payment_model_1.default.findOne({
+        transactionId,
+    });
+    if (!payment) {
+        throw new Error("Payment record not found");
+    }
+    if (payment.amount !== amount) {
+        throw new Error("Payment amount does not match");
+    }
+    payment.paymentStatus = "paid";
+    payment.paidAt = new Date();
+    await payment.save();
+    await order_model_1.default.findByIdAndUpdate(payment.order, {
+        paymentStatus: "paid",
+    });
+    return payment;
+};
 const getAllPayments = async () => {
     const payments = await payment_model_1.default.find()
         .populate("user", "name email")
@@ -108,5 +140,6 @@ exports.paymentService = {
     getPaymentByOrder,
     updatePaymentStatus,
     getAllPayments,
+    validateAndCompletePayment,
 };
 //# sourceMappingURL=payment.service.js.map

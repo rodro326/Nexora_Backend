@@ -2,6 +2,7 @@ import Payment from "./payment.model";
 import Order from "../order/order.model";
 import { initiatePayment } from "./sslcommerz.service";
 import crypto from "crypto";
+import { validatePayment } from "./sslcommerz.service";
 
 const createPayment = async (
   userId: string,
@@ -65,6 +66,8 @@ const createPayment = async (
     paymentStatus: "pending",
     transactionId,
   });
+
+
 
   const gatewayResponse = await initiatePayment({
     totalAmount: payload.amount,
@@ -141,6 +144,49 @@ const updatePaymentStatus = async (
   return payment;
 };
 
+const validateAndCompletePayment = async (valId: string) => {
+  const validationResponse = await validatePayment(valId);
+
+  if (validationResponse.status !== "VALID") {
+    throw new Error("SSLCommerz payment validation failed");
+  }
+
+  const transactionId = validationResponse.tran_id;
+  const amount = Number(validationResponse.amount);
+  const currency = validationResponse.currency;
+
+  if (!transactionId) {
+    throw new Error("Transaction ID missing from SSLCommerz response");
+  }
+
+  if (currency !== "BDT") {
+    throw new Error("Invalid payment currency");
+  }
+
+  const payment = await Payment.findOne({
+    transactionId,
+  });
+
+  if (!payment) {
+    throw new Error("Payment record not found");
+  }
+
+  if (payment.amount !== amount) {
+    throw new Error("Payment amount does not match");
+  }
+
+  payment.paymentStatus = "paid";
+  payment.paidAt = new Date();
+
+  await payment.save();
+
+  await Order.findByIdAndUpdate(payment.order, {
+    paymentStatus: "paid",
+  });
+
+  return payment;
+};
+
 const getAllPayments = async () => {
   const payments = await Payment.find()
     .populate("user", "name email")
@@ -159,4 +205,5 @@ export const paymentService = {
   getPaymentByOrder,
   updatePaymentStatus,
   getAllPayments,
+  validateAndCompletePayment,
 };

@@ -37,6 +37,7 @@ const initiatePayment = async (payload) => {
         ship_country: "Bangladesh",
     };
     const response = await sslcommerz.init(data);
+    console.log("SSLCommerz init response:", response);
     return response;
 };
 exports.initiatePayment = initiatePayment;
