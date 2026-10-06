@@ -17,9 +17,18 @@ import reviewRoute from "./modules/review/review.route";
 import couponRoute from "./modules/coupon/coupon.route";
 import withdrawalRoute from "./modules/withdrawal/withdrawal.route";
 import aiChatRoute from "./modules/ai-chat/ai.route";
+import cors from "cors";
+
+
 
 const app = express();
 
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 
