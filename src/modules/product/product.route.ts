@@ -3,12 +3,21 @@ import authMiddleware from "../../middlewares/auth.middleware";
 import roleMiddleware from "../../middlewares/role.middleware";
 import validationMiddleware from "../../middlewares/validation.middleware";
 import { productController } from "./product.controller";
+import upload from "../../middlewares/upload.middleware";
 import {
   createProductValidationSchema,
   updateProductValidationSchema,
 } from "./product.validation";
 
 const router = express.Router();
+
+router.post(
+  "/upload-image",
+  authMiddleware,
+  roleMiddleware("vendor"),
+  upload.single("image"),
+  productController.uploadProductImage
+);
 
 // Public routes
 router.get("/", productController.getAllProducts);

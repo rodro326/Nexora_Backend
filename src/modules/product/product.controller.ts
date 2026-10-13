@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 import { productService } from "./product.service";
+import { productImageService } from "./product-image.service";
 
 const createProduct = async (req: AuthRequest, res: Response) => {
   try {
@@ -149,10 +150,51 @@ const deleteProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
+const uploadProductImage = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select an image to upload",
+      });
+    }
+
+    const imageUrl = await productImageService.uploadProductImage(req.file);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product image uploaded successfully",
+      data: {
+        imageUrl,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Image upload failed",
+    });
+  }
+};
+
+// Keep your existing createProduct, getAllProducts,
+// getProductById, updateProduct and deleteProduct functions unchanged.
+
+
+
 export const productController = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
 };
