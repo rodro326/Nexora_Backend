@@ -1,3 +1,4 @@
+
 import { Request, Response, NextFunction } from "express";
 import { ZodSchema } from "zod";
 
@@ -9,12 +10,27 @@ const validationMiddleware = (schema: ZodSchema) => {
       return res.status(400).json({
         success: false,
         message: "Validation failed",
-        errors: result.error.issues,
+        errors: result.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+          receivedValue: issue.path.reduce(
+            (value: unknown, key) => {
+              if (
+                value !== null &&
+                typeof value === "object"
+              ) {
+                return (value as Record<string, unknown>)[String(key)];
+              }
+
+              return undefined;
+            },
+            req.body as unknown
+          ),
+        })),
       });
     }
 
     req.body = result.data;
-
     next();
   };
 };

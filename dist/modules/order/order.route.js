@@ -14,6 +14,10 @@ const router = express_1.default.Router();
 router.post("/", auth_middleware_1.default, (0, role_middleware_1.default)("customer"), (0, validation_middleware_1.default)(order_validation_1.createOrderValidationSchema), order_controller_1.orderController.createOrder);
 // Customer: Get My Orders
 router.get("/my-orders", auth_middleware_1.default, (0, role_middleware_1.default)("customer"), order_controller_1.orderController.getMyOrders);
+// Vendor: Get My Orders
+router.get("/vendor/my-orders", auth_middleware_1.default, (0, role_middleware_1.default)("vendor"), order_controller_1.orderController.getVendorOrders);
+// Vendor: Get Sales Analytics Report
+router.get("/vendor/sales-report", auth_middleware_1.default, (0, role_middleware_1.default)("vendor"), order_controller_1.orderController.getVendorSalesReport);
 // Customer: Get Single Order
 router.get("/:orderId", auth_middleware_1.default, (0, role_middleware_1.default)("customer"), order_controller_1.orderController.getOrderById);
 // Admin: Update Order Status

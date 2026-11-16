@@ -7,7 +7,17 @@ const validationMiddleware = (schema) => {
             return res.status(400).json({
                 success: false,
                 message: "Validation failed",
-                errors: result.error.issues,
+                errors: result.error.issues.map((issue) => ({
+                    field: issue.path.join("."),
+                    message: issue.message,
+                    receivedValue: issue.path.reduce((value, key) => {
+                        if (value !== null &&
+                            typeof value === "object") {
+                            return value[String(key)];
+                        }
+                        return undefined;
+                    }, req.body),
+                })),
             });
         }
         req.body = result.data;

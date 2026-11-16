@@ -32,6 +32,16 @@ const getAllProducts = async () => {
   return products;
 };
 
+const getProductsByVendor = async (vendorId: string) => {
+  const products = await Product.find({ vendor: vendorId })
+    .populate("category", "name slug")
+    .populate("brand", "name slug")
+    .sort({ createdAt: -1 });
+
+  return products;
+};
+
+
 const getProductById = async (productId: string) => {
   const product = await Product.findById(productId)
     .populate("category", "name slug")
@@ -138,9 +148,11 @@ if (search) {
   return products;
 };
 
+
 export const productService = {
   createProduct,
   getAllProducts,
+  getProductsByVendor,
   getProductById,
   updateProduct,
   deleteProduct,

@@ -27,6 +27,18 @@ const orderItemSchema = new mongoose_1.Schema({
         required: [true, "Subtotal is required"],
         min: [0, "Subtotal cannot be negative"],
     },
+    itemStatus: {
+        type: String,
+        enum: [
+            "pending",
+            "confirmed",
+            "processing",
+            "shipped",
+            "delivered",
+            "cancelled",
+        ],
+        default: "pending",
+    },
 }, {
     _id: false,
 });

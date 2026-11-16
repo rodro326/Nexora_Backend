@@ -1,6 +1,15 @@
+
 import { Schema, model, Types } from "mongoose";
 
 export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export type OrderItemStatus =
   | "pending"
   | "confirmed"
   | "processing"
@@ -20,6 +29,7 @@ export interface IOrderItem {
   quantity: number;
   price: number;
   subtotal: number;
+  itemStatus?: OrderItemStatus;
 }
 
 export interface IOrder {
@@ -75,6 +85,19 @@ const orderItemSchema = new Schema<IOrderItem>(
       type: Number,
       required: [true, "Subtotal is required"],
       min: [0, "Subtotal cannot be negative"],
+    },
+
+    itemStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
+      default: "pending",
     },
   },
   {

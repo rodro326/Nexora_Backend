@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updatePaymentStatusValidationSchema = exports.updateOrderStatusValidationSchema = exports.createOrderValidationSchema = void 0;
+exports.updateVendorItemStatusValidationSchema = exports.updatePaymentStatusValidationSchema = exports.updateOrderStatusValidationSchema = exports.createOrderValidationSchema = void 0;
 const zod_1 = require("zod");
 const shippingAddressSchema = zod_1.z.object({
     fullName: zod_1.z.string().min(2).max(100),
@@ -29,6 +29,13 @@ exports.updatePaymentStatusValidationSchema = zod_1.z.object({
         "paid",
         "failed",
         "refunded",
+    ]),
+});
+exports.updateVendorItemStatusValidationSchema = zod_1.z.object({
+    itemStatus: zod_1.z.enum([
+        "confirmed",
+        "processing",
+        "shipped",
     ]),
 });
 //# sourceMappingURL=order.validation.js.map

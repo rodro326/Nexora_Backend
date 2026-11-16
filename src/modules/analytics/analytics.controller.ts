@@ -3,6 +3,7 @@ import { AuthRequest } from "../../middlewares/auth.middleware";
 import { analyticsService } from "./analytics.service";
 
 // Admin analytics
+
 const getAdminAnalytics = async (
   req: AuthRequest,
   res: Response
@@ -15,15 +16,26 @@ const getAdminAnalytics = async (
       });
     }
 
-    const analytics = await analyticsService.getAdminAnalytics();
+    const requestedPeriod = String(req.query.period || "daily");
 
-    res.status(200).json({
+    if (!["daily", "weekly", "monthly"].includes(requestedPeriod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid period. Use daily, weekly or monthly.",
+      });
+    }
+
+    const analytics = await analyticsService.getAdminAnalytics(
+      requestedPeriod as "daily" | "weekly" | "monthly"
+    );
+
+    return res.status(200).json({
       success: true,
       message: "Admin analytics retrieved successfully",
       data: analytics,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message:
         error instanceof Error
@@ -32,6 +44,8 @@ const getAdminAnalytics = async (
     });
   }
 };
+
+
 
 // Vendor analytics
 const getVendorAnalytics = async (

@@ -49,6 +49,36 @@ const getAllProducts = async (req: Request, res: Response) => {
   }
 };
 
+const getVendorProducts = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const products = await productService.getProductsByVendor(
+      req.user.userId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Vendor products retrieved successfully",
+      data: products,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to retrieve vendor products",
+    });
+  }
+};
+
+
 const getProductById = async (req: Request, res: Response) => {
   try {
     const productId = req.params.productId as string;
@@ -190,9 +220,11 @@ const uploadProductImage = async (req: AuthRequest, res: Response) => {
 
 
 
+
 export const productController = {
   createProduct,
   getAllProducts,
+  getVendorProducts,
   getProductById,
   updateProduct,
   deleteProduct,

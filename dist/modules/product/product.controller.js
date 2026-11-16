@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.productController = void 0;
 const product_service_1 = require("./product.service");
+const product_image_service_1 = require("./product-image.service");
 const createProduct = async (req, res) => {
     try {
         if (!req.user) {
@@ -37,6 +38,30 @@ const getAllProducts = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : "Failed to retrieve products",
+        });
+    }
+};
+const getVendorProducts = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+        const products = await product_service_1.productService.getProductsByVendor(req.user.userId);
+        return res.status(200).json({
+            success: true,
+            message: "Vendor products retrieved successfully",
+            data: products,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error instanceof Error
+                ? error.message
+                : "Failed to retrieve vendor products",
         });
     }
 };
@@ -120,11 +145,45 @@ const deleteProduct = async (req, res) => {
         });
     }
 };
+const uploadProductImage = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "Please select an image to upload",
+            });
+        }
+        const imageUrl = await product_image_service_1.productImageService.uploadProductImage(req.file);
+        return res.status(200).json({
+            success: true,
+            message: "Product image uploaded successfully",
+            data: {
+                imageUrl,
+            },
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : "Image upload failed",
+        });
+    }
+};
+// Keep your existing createProduct, getAllProducts,
+// getProductById, updateProduct and deleteProduct functions unchanged.
 exports.productController = {
     createProduct,
     getAllProducts,
+    getVendorProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    uploadProductImage,
 };
 //# sourceMappingURL=product.controller.js.map

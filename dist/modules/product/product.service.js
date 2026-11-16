@@ -20,6 +20,13 @@ const getAllProducts = async () => {
         .sort({ createdAt: -1 });
     return products;
 };
+const getProductsByVendor = async (vendorId) => {
+    const products = await product_model_1.default.find({ vendor: vendorId })
+        .populate("category", "name slug")
+        .populate("brand", "name slug")
+        .sort({ createdAt: -1 });
+    return products;
+};
 const getProductById = async (productId) => {
     const product = await product_model_1.default.findById(productId)
         .populate("category", "name slug")
@@ -93,6 +100,7 @@ const searchProductsForAI = async (search, maxPrice) => {
 exports.productService = {
     createProduct,
     getAllProducts,
+    getProductsByVendor,
     getProductById,
     updateProduct,
     deleteProduct,

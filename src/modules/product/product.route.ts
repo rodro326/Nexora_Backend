@@ -11,6 +11,7 @@ import {
 
 const router = express.Router();
 
+
 router.post(
   "/upload-image",
   authMiddleware,
@@ -18,6 +19,15 @@ router.post(
   upload.single("image"),
   productController.uploadProductImage
 );
+
+
+router.get(
+  "/vendor/my-products",
+  authMiddleware,
+  roleMiddleware("vendor"),
+  productController.getVendorProducts
+);
+
 
 // Public routes
 router.get("/", productController.getAllProducts);

@@ -33,3 +33,12 @@ export const updatePaymentStatusValidationSchema = z.object({
     "refunded",
   ]),
 });
+
+
+export const updateVendorItemStatusValidationSchema = z.object({
+  itemStatus: z.enum([
+    "confirmed",
+    "processing",
+    "shipped",
+  ]),
+});
