@@ -14,8 +14,19 @@ interface VendorSalesReportOptions {
 
 type SalesPeriod = "daily" | "weekly" | "monthly";
 
+type ItemStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
 // Helper: Get chart date key
-const getChartDateKey = (date: Date, period: SalesPeriod): string => {
+const getChartDateKey = (
+  date: Date,
+  period: SalesPeriod
+): string => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -28,10 +39,9 @@ const getChartDateKey = (date: Date, period: SalesPeriod): string => {
     return `${year}-${month}`;
   }
 
-  // Weekly: Monday as the first day of the week
+  // Weekly: Monday as the first day
   const monday = new Date(date);
   const dayOfWeek = monday.getUTCDay();
-
   const difference = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
 
   monday.setUTCDate(monday.getUTCDate() + difference);
@@ -41,6 +51,54 @@ const getChartDateKey = (date: Date, period: SalesPeriod): string => {
   const weekDay = String(monday.getUTCDate()).padStart(2, "0");
 
   return `${weekYear}-${weekMonth}-${weekDay}`;
+};
+
+// Helper: Get populated product information safely
+const getProductInfo = (product: unknown) => {
+  if (!product || typeof product !== "object") {
+    return {
+      productId: String(product || ""),
+      productName: "Unknown Product",
+      image: "",
+    };
+  }
+
+  const productData = product as {
+    _id?: unknown;
+    name?: string;
+    images?: string[];
+  };
+
+  return {
+    productId: String(productData._id || product),
+    productName: productData.name || "Unknown Product",
+    image: productData.images?.[0] || "",
+  };
+};
+
+// Helper: Get item status
+const getItemStatus = (
+  itemStatus: ItemStatus | undefined,
+  orderStatus: string
+): ItemStatus => {
+  if (itemStatus) {
+    return itemStatus;
+  }
+
+  const validStatuses: ItemStatus[] = [
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
+
+  if (validStatuses.includes(orderStatus as ItemStatus)) {
+    return orderStatus as ItemStatus;
+  }
+
+  return "pending";
 };
 
 // Create Order
@@ -55,7 +113,6 @@ const createOrder = async (
   },
   paymentMethod: "cod" | "card" | "online"
 ) => {
-  // Keep product references as ObjectIds
   const cart = await Cart.findOne({ user: userId });
 
   if (!cart || cart.items.length === 0) {
@@ -87,6 +144,7 @@ const createOrder = async (
       quantity: cartItem.quantity,
       price: product.price,
       subtotal,
+      itemStatus: "pending" as const,
     });
   }
 
@@ -147,22 +205,25 @@ const getOrderById = async (
 // Admin: Update Order Status
 const updateOrderStatus = async (
   orderId: string,
-  orderStatus:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled"
+  orderStatus: ItemStatus
 ) => {
-  const order = await Order.findByIdAndUpdate(
-    orderId,
-    { orderStatus },
-    {
-      returnDocument: "after",
-      runValidators: true,
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    return null;
+  }
+
+  order.orderStatus = orderStatus;
+
+  // Admin confirms final delivery/cancellation for all order items.
+  // This keeps item-level analytics consistent with admin order status.
+  if (orderStatus === "delivered" || orderStatus === "cancelled") {
+    for (const item of order.items) {
+      item.itemStatus = orderStatus;
     }
-  );
+  }
+
+  await order.save();
 
   return order;
 };
@@ -170,11 +231,7 @@ const updateOrderStatus = async (
 // Admin: Update Payment Status
 const updatePaymentStatus = async (
   orderId: string,
-  paymentStatus:
-    | "pending"
-    | "paid"
-    | "failed"
-    | "refunded"
+  paymentStatus: "pending" | "paid" | "failed" | "refunded"
 ) => {
   const order = await Order.findByIdAndUpdate(
     orderId,
@@ -257,7 +314,7 @@ const getVendorSalesReport = async (
     throw new Error("Start date cannot be after end date");
   }
 
-  // Find orders containing this vendor's products
+  // Find only orders containing this vendor's products
   const matchQuery: Record<string, unknown> = {
     "items.vendor": vendorId,
   };
@@ -268,11 +325,12 @@ const getVendorSalesReport = async (
 
   const orders = await Order.find(matchQuery)
     .populate("user", "name email")
-    .populate("items.product", "name images")
+    .populate("items.product", "name images stock")
     .sort({ createdAt: -1 });
 
-  // Summary calculations
+  // Summary
   let totalRevenue = 0;
+  let pendingDeliveryValue = 0;
   let totalProductsSold = 0;
 
   const orderStatus = {
@@ -295,47 +353,99 @@ const getVendorSalesReport = async (
     }
   >();
 
-  // Prepare vendor-specific sales
+  // Product performance data
+  const productMap = new Map<
+    string,
+    {
+      productId: string;
+      productName: string;
+      image: string;
+      quantitySold: number;
+      revenue: number;
+    }
+  >();
+
+  const statusRank: Record<ItemStatus, number> = {
+    pending: 0,
+    confirmed: 1,
+    processing: 2,
+    shipped: 3,
+    delivered: 4,
+    cancelled: 5,
+  };
+
+  // Vendor-specific order calculations
   const allVendorSales = orders.map((order) => {
     const vendorItems = order.items.filter(
       (item) => item.vendor.toString() === vendorId
     );
 
-    const orderValue = vendorItems.reduce(
-      (total, item) => total + Number(item.subtotal || 0),
-      0
+    let orderRevenue = 0;
+    let orderPendingValue = 0;
+    let orderDeliveredQuantity = 0;
+    let orderTotalQuantity = 0;
+
+    const itemStatuses = vendorItems.map((item) =>
+      getItemStatus(
+        item.itemStatus as ItemStatus | undefined,
+        order.orderStatus
+      )
     );
 
-    const productsSold = vendorItems.reduce(
-      (total, item) => total + Number(item.quantity || 0),
-      0
+    // Count each vendor order only once by its least advanced active item
+    const activeStatuses = itemStatuses.filter(
+      (status) => status !== "cancelled"
     );
 
-    const status = order.orderStatus as keyof typeof orderStatus;
+    let vendorOrderStatus: ItemStatus = "cancelled";
 
-    if (status in orderStatus) {
-      orderStatus[status] += 1;
+    if (activeStatuses.length > 0) {
+      vendorOrderStatus = activeStatuses.reduce((lowest, current) =>
+        statusRank[current] < statusRank[lowest] ? current : lowest
+      );
     }
 
-    // Revenue and product sales count only delivered orders
-    if (status === "delivered") {
-      totalRevenue += orderValue;
-      totalProductsSold += productsSold;
+    orderStatus[vendorOrderStatus] += 1;
 
-      if (!order.createdAt) {
-        return {
-          orderId: order._id,
-          customer: order.user,
-          items: vendorItems,
-          revenue: orderValue,
-          orderValue,
-          productsSold,
-          orderStatus: order.orderStatus,
-          paymentStatus: order.paymentStatus,
-          createdAt: order.createdAt,
-        };
+    vendorItems.forEach((item, index) => {
+      const status = itemStatuses[index];
+      const subtotal = Number(item.subtotal || 0);
+      const quantity = Number(item.quantity || 0);
+
+      orderTotalQuantity += quantity;
+
+      // Delivered revenue and product performance
+      if (status === "delivered") {
+        orderRevenue += subtotal;
+        orderDeliveredQuantity += quantity;
+
+        const productInfo = getProductInfo(item.product);
+        const existing = productMap.get(productInfo.productId);
+
+        if (existing) {
+          existing.quantitySold += quantity;
+          existing.revenue += subtotal;
+        } else {
+          productMap.set(productInfo.productId, {
+            ...productInfo,
+            quantitySold: quantity,
+            revenue: subtotal,
+          });
+        }
       }
-      
+
+      // Not yet delivered and not cancelled
+      if (status !== "delivered" && status !== "cancelled") {
+        orderPendingValue += subtotal;
+      }
+    });
+
+    totalRevenue += orderRevenue;
+    pendingDeliveryValue += orderPendingValue;
+    totalProductsSold += orderDeliveredQuantity;
+
+    // Sales chart uses delivered product revenue only
+    if (orderRevenue > 0 && order.createdAt) {
       const dateKey = getChartDateKey(
         new Date(order.createdAt),
         selectedPeriod
@@ -344,46 +454,77 @@ const getVendorSalesReport = async (
       const existing = chartMap.get(dateKey);
 
       if (existing) {
-        existing.revenue += orderValue;
+        existing.revenue += orderRevenue;
         existing.orders += 1;
-        existing.productsSold += productsSold;
+        existing.productsSold += orderDeliveredQuantity;
       } else {
         chartMap.set(dateKey, {
           date: dateKey,
-          revenue: orderValue,
+          revenue: orderRevenue,
           orders: 1,
-          productsSold,
+          productsSold: orderDeliveredQuantity,
         });
       }
     }
 
     return {
-      orderId: order._id,
+      orderId: order._id.toString(),
       customer: order.user,
       items: vendorItems,
-      revenue: orderValue,
-      orderValue,
-      productsSold,
-      orderStatus: order.orderStatus,
+      revenue: orderRevenue,
+      deliveredRevenue: orderRevenue,
+      pendingDeliveryValue: orderPendingValue,
+      orderValue: vendorItems.reduce(
+        (total, item) => total + Number(item.subtotal || 0),
+        0
+      ),
+      productsSold: orderTotalQuantity,
+      deliveredProductsSold: orderDeliveredQuantity,
+      orderStatus: vendorOrderStatus,
       paymentStatus: order.paymentStatus,
       createdAt: order.createdAt,
     };
   });
 
-  // Exclude cancelled orders from total orders
+  // Summary counts
   const totalOrders =
     orders.length - orderStatus.cancelled;
 
   const pendingOrders = orderStatus.pending;
+  const confirmedOrders = orderStatus.confirmed;
+  const processingOrders = orderStatus.processing;
+  const shippedOrders = orderStatus.shipped;
   const deliveredOrders = orderStatus.delivered;
+  const cancelledOrders = orderStatus.cancelled;
 
   const inTransitOrders =
-    orderStatus.processing + orderStatus.shipped;
+    processingOrders + shippedOrders;
 
-  // Sort chart data by date
+  // Sort chart data
   const salesOverview = Array.from(chartMap.values()).sort(
     (a, b) => a.date.localeCompare(b.date)
   );
+
+  // Product-wise performance
+  const productPerformance = Array.from(
+    productMap.values()
+  ).sort((a, b) => b.revenue - a.revenue);
+
+  // Best selling products
+  const bestSellingProducts = [...productPerformance]
+    .sort((a, b) => b.quantitySold - a.quantitySold)
+    .slice(0, 5);
+
+  // Vendor-specific low stock products
+  const lowStockProducts = await Product.find({
+    vendor: vendorId,
+    isActive: true,
+    stock: { $lte: 5 },
+  })
+    .select("name price stock images")
+    .sort({ stock: 1 })
+    .limit(10)
+    .lean();
 
   // Pagination
   const totalRecords = allVendorSales.length;
@@ -398,20 +539,27 @@ const getVendorSalesReport = async (
   return {
     summary: {
       totalRevenue,
+      pendingDeliveryValue,
       totalOrders,
       totalProductsSold,
       deliveredOrders,
       pendingOrders,
-      confirmedOrders: orderStatus.confirmed,
-      processingOrders: orderStatus.processing,
-      shippedOrders: orderStatus.shipped,
-      cancelledOrders: orderStatus.cancelled,
+      confirmedOrders,
+      processingOrders,
+      shippedOrders,
+      cancelledOrders,
       inTransitOrders,
     },
 
     orderStatus,
 
     salesOverview,
+
+    productPerformance,
+
+    bestSellingProducts,
+
+    lowStockProducts,
 
     recentSales,
 
@@ -481,7 +629,6 @@ const getSalesReport = async () => {
   };
 };
 
-
 // Vendor: Get Orders Containing Vendor's Products
 const getVendorOrders = async (vendorId: string) => {
   const orders = await Order.find({
@@ -491,7 +638,6 @@ const getVendorOrders = async (vendorId: string) => {
     .populate("items.product", "name price images")
     .sort({ createdAt: -1 });
 
-  // Return only the current vendor's order items
   return orders.map((order) => {
     const vendorItems = order.items.filter(
       (item) => item.vendor.toString() === vendorId
@@ -503,7 +649,7 @@ const getVendorOrders = async (vendorId: string) => {
       shippingAddress: order.shippingAddress,
       items: vendorItems,
       vendorOrderTotal: vendorItems.reduce(
-        (total, item) => total + item.subtotal,
+        (total, item) => total + Number(item.subtotal || 0),
         0
       ),
       orderStatus: order.orderStatus,
@@ -513,7 +659,7 @@ const getVendorOrders = async (vendorId: string) => {
   });
 };
 
-
+// Vendor: Update own product item status
 const updateVendorItemStatus = async (
   orderId: string,
   vendorId: string,
@@ -550,23 +696,38 @@ const updateVendorItemStatus = async (
     processing: ["shipped"],
   };
 
-  if (!allowedTransitions[item.itemStatus || "pending"]?.includes(itemStatus)) {
+  if (
+    !allowedTransitions[item.itemStatus || "pending"]?.includes(itemStatus)
+  ) {
     throw new Error("Invalid order status transition");
   }
 
   item.itemStatus = itemStatus;
 
-  // Update overall order status without allowing a vendor
-  // to mark the complete order as delivered.
+  // Derive overall order status from all item statuses
   const itemStatuses = order.items.map(
     (orderItem) => orderItem.itemStatus || "pending"
   );
 
   if (itemStatuses.every((status) => status === "cancelled")) {
     order.orderStatus = "cancelled";
-  } else if (itemStatuses.every((status) => status === "shipped" || status === "delivered" || status === "cancelled")) {
+  } else if (
+    itemStatuses.every(
+      (status) =>
+        status === "shipped" ||
+        status === "delivered" ||
+        status === "cancelled"
+    )
+  ) {
     order.orderStatus = "shipped";
-  } else if (itemStatuses.some((status) => status === "processing" || status === "shipped" || status === "delivered")) {
+  } else if (
+    itemStatuses.some(
+      (status) =>
+        status === "processing" ||
+        status === "shipped" ||
+        status === "delivered"
+    )
+  ) {
     order.orderStatus = "processing";
   } else if (itemStatuses.some((status) => status === "confirmed")) {
     order.orderStatus = "confirmed";
@@ -578,8 +739,6 @@ const updateVendorItemStatus = async (
 
   return order;
 };
-
-
 
 export const orderService = {
   createOrder,

@@ -14,6 +14,7 @@ const router = express_1.default.Router();
 router.post("/", auth_middleware_1.default, (0, role_middleware_1.default)("customer"), (0, validation_middleware_1.default)(order_validation_1.createOrderValidationSchema), order_controller_1.orderController.createOrder);
 // Customer: Get My Orders
 router.get("/my-orders", auth_middleware_1.default, (0, role_middleware_1.default)("customer"), order_controller_1.orderController.getMyOrders);
+router.patch("/vendor/:orderId/items/:productId/status", auth_middleware_1.default, (0, role_middleware_1.default)("vendor"), (0, validation_middleware_1.default)(order_validation_1.updateVendorItemStatusValidationSchema), order_controller_1.orderController.updateVendorItemStatus);
 // Vendor: Get My Orders
 router.get("/vendor/my-orders", auth_middleware_1.default, (0, role_middleware_1.default)("vendor"), order_controller_1.orderController.getVendorOrders);
 // Vendor: Get Sales Analytics Report

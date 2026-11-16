@@ -48,6 +48,7 @@ const getAdminAnalytics = async (
 
 
 // Vendor analytics
+
 const getVendorAnalytics = async (
   req: AuthRequest,
   res: Response
@@ -60,17 +61,27 @@ const getVendorAnalytics = async (
       });
     }
 
+    const requestedPeriod = String(req.query.period || "daily");
+
+    if (!["daily", "weekly", "monthly"].includes(requestedPeriod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid period. Use daily, weekly or monthly.",
+      });
+    }
+
     const analytics = await analyticsService.getVendorAnalytics(
-      req.user.userId
+      req.user.userId,
+      requestedPeriod as "daily" | "weekly" | "monthly"
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Vendor analytics retrieved successfully",
       data: analytics,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message:
         error instanceof Error
@@ -79,6 +90,7 @@ const getVendorAnalytics = async (
     });
   }
 };
+
 
 export const analyticsController = {
   getAdminAnalytics,

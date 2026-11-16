@@ -43,15 +43,22 @@ const getVendorAnalytics = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const analytics = await analytics_service_1.analyticsService.getVendorAnalytics(req.user.userId);
-        res.status(200).json({
+        const requestedPeriod = String(req.query.period || "daily");
+        if (!["daily", "weekly", "monthly"].includes(requestedPeriod)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid period. Use daily, weekly or monthly.",
+            });
+        }
+        const analytics = await analytics_service_1.analyticsService.getVendorAnalytics(req.user.userId, requestedPeriod);
+        return res.status(200).json({
             success: true,
             message: "Vendor analytics retrieved successfully",
             data: analytics,
         });
     }
     catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: error instanceof Error
                 ? error.message

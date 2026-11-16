@@ -4,10 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyticsService = void 0;
+const mongoose_1 = require("mongoose");
 const user_model_1 = __importDefault(require("../user/user.model"));
 const product_model_1 = __importDefault(require("../product/product.model"));
 const order_model_1 = __importDefault(require("../order/order.model"));
-const getAdminAnalytics = async (period = "daily") => {
+const getDateRange = (period) => {
     const now = new Date();
     const startDate = new Date(now);
     if (period === "daily") {
@@ -20,6 +21,11 @@ const getAdminAnalytics = async (period = "daily") => {
         startDate.setMonth(startDate.getMonth() - 11);
         startDate.setDate(1);
     }
+    return { now, startDate };
+};
+// ADMIN ANALYTICS
+const getAdminAnalytics = async (period = "daily") => {
+    const { now, startDate } = getDateRange(period);
     const chartFormat = period === "daily"
         ? "%Y-%m-%d"
         : period === "weekly"
@@ -30,13 +36,8 @@ const getAdminAnalytics = async (period = "daily") => {
         user_model_1.default.countDocuments({ role: "vendor" }),
         product_model_1.default.countDocuments({ isActive: true }),
         order_model_1.default.countDocuments(),
-        // Revenue from delivered orders only
         order_model_1.default.aggregate([
-            {
-                $match: {
-                    orderStatus: "delivered",
-                },
-            },
+            { $match: { orderStatus: "delivered" } },
             {
                 $group: {
                     _id: null,
@@ -44,7 +45,6 @@ const getAdminAnalytics = async (period = "daily") => {
                 },
             },
         ]),
-        // Order status breakdown
         order_model_1.default.aggregate([
             {
                 $group: {
@@ -52,11 +52,7 @@ const getAdminAnalytics = async (period = "daily") => {
                     count: { $sum: 1 },
                 },
             },
-            {
-                $sort: { count: -1 },
-            },
         ]),
-        // Revenue chart
         order_model_1.default.aggregate([
             {
                 $match: {
@@ -77,9 +73,7 @@ const getAdminAnalytics = async (period = "daily") => {
                     orders: { $sum: 1 },
                 },
             },
-            {
-                $sort: { _id: 1 },
-            },
+            { $sort: { _id: 1 } },
             {
                 $project: {
                     _id: 0,
@@ -89,7 +83,6 @@ const getAdminAnalytics = async (period = "daily") => {
                 },
             },
         ]),
-        // Latest platform orders
         order_model_1.default.find()
             .sort({ createdAt: -1 })
             .limit(8)
@@ -131,63 +124,215 @@ const getAdminAnalytics = async (period = "daily") => {
         },
     };
 };
-const getVendorAnalytics = async (vendorId) => {
-    const [totalProducts, orderData, revenueData,] = await Promise.all([
+// VENDOR ANALYTICS
+const getVendorAnalytics = async (vendorId, period = "daily") => {
+    const vendorObjectId = new mongoose_1.Types.ObjectId(vendorId);
+    const { now, startDate } = getDateRange(period);
+    const chartFormat = period === "daily"
+        ? "%Y-%m-%d"
+        : period === "weekly"
+            ? "%G-W%V"
+            : "%Y-%m";
+    const vendorOrderMatch = {
+        "items.vendor": vendorObjectId,
+    };
+    const itemStatusExpression = {
+        $ifNull: ["$items.itemStatus", "pending"],
+    };
+    const [totalProducts, totalOrders, totalRevenueData, salesOverview, itemStatusData, lowStockProducts, recentOrders, topProducts,] = await Promise.all([
+        // Active vendor products
         product_model_1.default.countDocuments({
-            vendor: vendorId,
+            vendor: vendorObjectId,
             isActive: true,
         }),
+        // Distinct orders containing this vendor's products
+        order_model_1.default.countDocuments(vendorOrderMatch),
+        // Revenue from delivered vendor items only
         order_model_1.default.aggregate([
+            { $match: vendorOrderMatch },
+            { $unwind: "$items" },
             {
                 $match: {
-                    "items.vendor": vendorId,
-                    orderStatus: { $ne: "cancelled" },
-                },
-            },
-            {
-                $unwind: "$items",
-            },
-            {
-                $match: {
-                    "items.vendor": vendorId,
-                },
-            },
-            {
-                $group: {
-                    _id: null,
-                    totalOrders: { $sum: 1 },
-                    totalItemsSold: { $sum: "$items.quantity" },
-                },
-            },
-        ]),
-        order_model_1.default.aggregate([
-            {
-                $match: {
-                    "items.vendor": vendorId,
-                    orderStatus: "delivered",
-                },
-            },
-            {
-                $unwind: "$items",
-            },
-            {
-                $match: {
-                    "items.vendor": vendorId,
+                    "items.vendor": vendorObjectId,
+                    $expr: {
+                        $eq: [itemStatusExpression, "delivered"],
+                    },
                 },
             },
             {
                 $group: {
                     _id: null,
                     totalRevenue: { $sum: "$items.subtotal" },
+                    totalItemsSold: { $sum: "$items.quantity" },
+                },
+            },
+        ]),
+        // Date-wise delivered vendor sales
+        order_model_1.default.aggregate([
+            {
+                $match: {
+                    ...vendorOrderMatch,
+                    createdAt: { $gte: startDate, $lte: now },
+                },
+            },
+            { $unwind: "$items" },
+            {
+                $match: {
+                    "items.vendor": vendorObjectId,
+                    $expr: {
+                        $eq: [itemStatusExpression, "delivered"],
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: chartFormat,
+                            date: "$createdAt",
+                            timezone: "Asia/Dhaka",
+                        },
+                    },
+                    revenue: { $sum: "$items.subtotal" },
+                    orders: { $addToSet: "$_id" },
+                },
+            },
+            { $sort: { _id: 1 } },
+            {
+                $project: {
+                    _id: 0,
+                    date: "$_id",
+                    revenue: 1,
+                    orders: { $size: "$orders" },
+                },
+            },
+        ]),
+        // Vendor item status breakdown
+        order_model_1.default.aggregate([
+            { $match: vendorOrderMatch },
+            { $unwind: "$items" },
+            {
+                $match: {
+                    "items.vendor": vendorObjectId,
+                },
+            },
+            {
+                $group: {
+                    _id: itemStatusExpression,
+                    count: { $sum: 1 },
+                },
+            },
+        ]),
+        // Low stock products (stock <= 5)
+        product_model_1.default.find({
+            vendor: vendorObjectId,
+            isActive: true,
+            stock: { $lte: 5 },
+        })
+            .select("name price stock images")
+            .sort({ stock: 1 })
+            .limit(8)
+            .lean(),
+        // Latest orders containing vendor products
+        order_model_1.default.find(vendorOrderMatch)
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .populate("user", "name email")
+            .populate("items.product", "name price images")
+            .lean(),
+        // Top selling products (delivered quantities)
+        order_model_1.default.aggregate([
+            { $match: vendorOrderMatch },
+            { $unwind: "$items" },
+            {
+                $match: {
+                    "items.vendor": vendorObjectId,
+                    $expr: {
+                        $eq: [itemStatusExpression, "delivered"],
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: "$items.product",
+                    totalSold: { $sum: "$items.quantity" },
+                    revenue: { $sum: "$items.subtotal" },
+                },
+            },
+            { $sort: { totalSold: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "product",
+                },
+            },
+            { $unwind: "$product" },
+            {
+                $project: {
+                    _id: 1,
+                    name: "$product.name",
+                    price: "$product.price",
+                    images: "$product.images",
+                    totalSold: 1,
+                    revenue: 1,
                 },
             },
         ]),
     ]);
+    const itemStatus = {
+        pending: 0,
+        confirmed: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        cancelled: 0,
+    };
+    itemStatusData.forEach((item) => {
+        if (item._id in itemStatus) {
+            itemStatus[item._id] =
+                item.count;
+        }
+    });
+    // Keep only this vendor's items in recent orders.
+    const formattedRecentOrders = recentOrders.map((order) => {
+        const vendorItems = order.items.filter((item) => item.vendor?.toString() === vendorId);
+        return {
+            _id: order._id,
+            customer: order.user,
+            items: vendorItems,
+            vendorOrderTotal: vendorItems.reduce((total, item) => total + item.subtotal, 0),
+            orderStatus: order.orderStatus,
+            paymentStatus: order.paymentStatus,
+            createdAt: order.createdAt,
+        };
+    });
     return {
-        totalProducts,
-        totalOrders: orderData[0]?.totalOrders || 0,
-        totalItemsSold: orderData[0]?.totalItemsSold || 0,
-        totalRevenue: revenueData[0]?.totalRevenue || 0,
+        summary: {
+            totalProducts,
+            totalOrders,
+            totalRevenue: totalRevenueData[0]?.totalRevenue || 0,
+            totalItemsSold: totalRevenueData[0]?.totalItemsSold || 0,
+            pendingOrders: itemStatus.pending,
+            confirmedOrders: itemStatus.confirmed,
+            processingOrders: itemStatus.processing,
+            shippedOrders: itemStatus.shipped,
+            deliveredOrders: itemStatus.delivered,
+            cancelledOrders: itemStatus.cancelled,
+            lowStockItems: lowStockProducts.length,
+        },
+        itemStatus,
+        salesOverview,
+        recentOrders: formattedRecentOrders,
+        lowStockProducts,
+        topProducts,
+        filters: {
+            period,
+            startDate,
+            endDate: now,
+        },
     };
 };
 exports.analyticsService = {
